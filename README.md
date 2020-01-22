@@ -1,5 +1,1 @@
-https://github.com/gruntwork-io/terratest
-
-test folder
-
-Built on top of Go
+AWS Infrastructure deployed with Terraform
