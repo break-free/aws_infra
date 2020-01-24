@@ -1,8 +1,20 @@
 provider "aws" {
-  version = "~> 2.0"
+  version = "~> 2.2"
+  region     = "us-west-1"
 }
 
- data "aws_availability_zones" "available" {}
+terraform {
+  backend "s3" {
+    region = "us-west-1"
+    bucket = "rdtfstate"
+    key = "terraform.tfstate"
+    dynamodb_table = "terraform-state-lock"
+    encrypt = true    #AES-256 encryption
+  }
+}
+
+
+data "aws_availability_zones" "available" {}
 
 #NOTE: The usage of the specific kubernetes.io/cluster/* resource tags below 
 #      are required for EKS and Kubernetes to discover and manage networking resources.
