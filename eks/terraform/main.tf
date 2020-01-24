@@ -8,6 +8,7 @@ terraform {
     region = "us-west-1"
     bucket = "rdtfstate"
     key = "terraform.tfstate"
+    dynamodb_table = "terraform-state-lock"
     encrypt = true    #AES-256 encryption
   }
 }
