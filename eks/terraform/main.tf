@@ -1,12 +1,12 @@
 provider "aws" {
   version = "~> 2.2"
-  region     = "us-west-1"
+  region     = "us-west-2"
 }
 
 terraform {
   backend "s3" {
-    region = "us-west-1"
-    bucket = "rdtfstate"
+    region = "us-west-2"
+    bucket = "rdtfstate2"
     key = "terraform.tfstate"
     dynamodb_table = "terraform-state-lock"
     encrypt = true    #AES-256 encryption
@@ -60,6 +60,13 @@ resource "aws_route_table" "terraform-eks-rd-routetable" {
   }
 }
 
+resource "aws_route_table_association" "terraform-eks-rd" {
+  count = 2
+
+  subnet_id      = aws_subnet.eks-rd-subnet[count.index].id
+  route_table_id = aws_route_table.terraform-eks-rd-routetable.id
+}
+
 # The following is required manage or retrieve data from other AWS Services
 
 resource "aws_iam_role" "rd-node" {
@@ -111,8 +118,7 @@ resource "aws_security_group" "rd-cluster" {
 }
 
 # OPTIONAL: Allow inbound traffic from your local workstation external IP
-#           to the Kubernetes. You will need to replace A.B.C.D below with
-#           your real IP. Services like icanhazip.com can help you find this.
+#           to the Kubernetes cluster.
 resource "aws_security_group_rule" "rd-cluster-ingress-workstation-https" {
   count             = length(var.workstation_ips)
   
@@ -123,4 +129,21 @@ resource "aws_security_group_rule" "rd-cluster-ingress-workstation-https" {
   security_group_id = aws_security_group.rd-cluster.id
   to_port           = 443
   type              = "ingress"
+}
+
+# The EKS Master Cluster
+
+resource "aws_eks_cluster" "rd-eks-cluster" {
+  name            = var.cluster-name
+  role_arn        = aws_iam_role.rd-node.arn
+
+  vpc_config {
+    security_group_ids = [aws_security_group.rd-cluster.id]
+    subnet_ids         = aws_subnet.eks-rd-subnet.*.id
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.rd-cluster-AmazonEKSClusterPolicy,
+    aws_iam_role_policy_attachment.rd-cluster-AmazonEKSServicePolicy,
+  ]
 }
