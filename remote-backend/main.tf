@@ -1,11 +1,11 @@
 provider "aws" {
   version    = "~> 2.2"
-  region     = "us-west-1"
+  region     = "us-west-2"
 }
 
 resource "aws_s3_bucket" "tf-state-storage" {
   # Must be globally unique.
-  bucket = "rdtfstate"
+  bucket = "rdtfstate2"
 
   # This allows you to roll back in the case of errors.
   versioning {
