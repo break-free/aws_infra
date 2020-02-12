@@ -1,6 +1,6 @@
 provider "aws" {
   version = "~> 2.2"
-  region     = "us-west-2"
+  region     = var.region
 }
 
 terraform {
@@ -67,8 +67,7 @@ resource "aws_route_table_association" "terraform-eks-rd" {
   route_table_id = aws_route_table.terraform-eks-rd-routetable.id
 }
 
-# The following is required manage or retrieve data from other AWS Services
-
+# Master Cluster and Cluster Role
 resource "aws_iam_role" "rd-node" {
   name = "terraform-eks-rd-cluster"
 
@@ -130,6 +129,48 @@ resource "aws_security_group_rule" "rd-cluster-ingress-workstation-https" {
   to_port           = 443
   type              = "ingress"
 }
+
+# EKS Node Security Group
+
+resource "aws_security_group" "rd-node" {
+  name        = "terraform-eks-rd-node"
+  description = "Security group for all nodes in the cluster"
+  vpc_id      = aws_vpc.eks-rd-vpc.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    "Name"                                      = "terraform-eks-rd-node"
+    "kubernetes.io/cluster/${var.cluster-name}" = "owned"
+  }
+}
+
+# allow Nodes communication with each other and the control plane
+
+resource "aws_security_group_rule" "rd-node-ingress-self" {
+  description              = "Allow node to communicate with each other"
+  from_port                = 0
+  protocol                 = "-1"
+  security_group_id        = aws_security_group.rd-node.id
+  source_security_group_id = aws_security_group.rd-node.id
+  to_port                  = 65535
+  type                     = "ingress"
+}
+
+resource "aws_security_group_rule" "rd-node-ingress-cluster" {
+  description              = "Allow worker Kubelets and pods to receive communication from the cluster control      plane"
+  from_port                = 1025
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.rd-node.id
+  source_security_group_id = aws_security_group.rd-cluster.id
+  to_port                  = 65535
+  type                     = "ingress"
+ }
 
 # The EKS Master Cluster
 
