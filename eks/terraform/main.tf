@@ -21,6 +21,49 @@ data "aws_availability_zones" "available" {}
 
 # Also note we are using Terraform's new interpolation syntax: https://www.terraform.io/docs/configuration-0-11/interpolation.html
 
+data "aws_ami" "eks-worker" {
+   filter {
+     name   = "name"
+     values = ["amazon-eks-node-${aws_eks_cluster.rd-eks-cluster.version}-v*"]
+   }
+
+   most_recent = true
+   owners      = ["602401143452"] # Amazon EKS AMI Account ID for AMI image
+ }
+
+# This data source is included for ease of sample architecture deployment
+# and can be swapped out as necessary.
+data "aws_region" "current" {
+}
+
+# EKS currently documents this required userdata for EKS worker nodes to
+# properly configure Kubernetes applications on the EC2 instance.
+# We implement a Terraform local here to simplify Base64 encoding this
+# information into the AutoScaling Launch Configuration.
+# More information: https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html
+locals {
+  rd-node-userdata = <<USERDATA
+#!/bin/bash
+set -o xtrace
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.rd-eks-cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.rd-eks-cluster.certificate_authority[0].data}' '${var.cluster-name}'
+USERDATA
+
+}
+
+resource "aws_launch_configuration" "rd" {
+  associate_public_ip_address = true
+  iam_instance_profile        = aws_iam_instance_profile.rd-node.name
+  image_id                    = data.aws_ami.eks-worker.id
+  instance_type               = "m4.large"
+  name_prefix                 = "terraform-eks-rd"
+  security_groups  = [aws_security_group.rd-node.id]
+  user_data_base64 = base64encode(local.rd-node-userdata)
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 resource "aws_vpc" "eks-rd-vpc" {
   cidr_block = "10.0.0.0/16"
 
@@ -172,6 +215,15 @@ resource "aws_security_group_rule" "rd-node-ingress-cluster" {
   type                     = "ingress"
  }
 
+resource "aws_security_group_rule" "rd-cluster-ingress-node-https" {
+  description              = "Allow pods to communicate with the cluster API Server"
+  from_port                = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.rd-cluster.id
+  source_security_group_id = aws_security_group.rd-node.id
+  to_port                  = 443
+  type                     = "ingress"
+}
 # The EKS Master Cluster
 
 resource "aws_eks_cluster" "rd-eks-cluster" {
