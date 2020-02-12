@@ -63,6 +63,26 @@ resource "aws_launch_configuration" "rd" {
     create_before_destroy = true
   }
 }
+resource "aws_autoscaling_group" "rd" {
+  desired_capacity     = 2
+  launch_configuration = aws_launch_configuration.rd.id
+  max_size             = 2
+  min_size             = 1
+  name                 = "terraform-eks-rd"
+  vpc_zone_identifier = [aws_subnet.rd.*.id]
+
+  tag {
+    key                 = "Name"
+    value               = "terraform-eks-rd"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "kubernetes.io/cluster/${var.cluster-name}"
+    value               = "owned"
+    propagate_at_launch = true
+  }
+}
 
 resource "aws_vpc" "eks-rd-vpc" {
   cidr_block = "10.0.0.0/16"
