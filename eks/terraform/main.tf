@@ -52,7 +52,6 @@ USERDATA
 
 resource "aws_launch_configuration" "rd" {
   associate_public_ip_address = true
-  iam_instance_profile        = aws_iam_instance_profile.rd-node.name
   image_id                    = data.aws_ami.eks-worker.id
   instance_type               = "m4.large"
   name_prefix                 = "terraform-eks-rd"
@@ -69,7 +68,7 @@ resource "aws_autoscaling_group" "rd" {
   max_size             = 2
   min_size             = 1
   name                 = "terraform-eks-rd"
-  vpc_zone_identifier = [aws_subnet.rd.*.id]
+  vpc_zone_identifier = aws_subnet.eks-rd-subnet.*.id
 
   tag {
     key                 = "Name"
@@ -259,4 +258,33 @@ resource "aws_eks_cluster" "rd-eks-cluster" {
     aws_iam_role_policy_attachment.rd-cluster-AmazonEKSClusterPolicy,
     aws_iam_role_policy_attachment.rd-cluster-AmazonEKSServicePolicy,
   ]
+}
+
+# Join Node to Cluster:
+# 1. Run terraform output config_map_aws_auth and save the configuration into a file, e.g. config_map_aws_auth.yaml
+# 2. Run kubectl apply -f config_map_aws_auth.yaml
+# 3. You can verify the worker nodes are joining the cluster via: kubectl get nodes --watch
+
+locals {
+  config_map_aws_auth = <<CONFIGMAPAWSAUTH
+
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-auth
+  namespace: kube-system
+data:
+  mapRoles: |
+    - rolearn: ${aws_iam_role.rd-node.arn}
+      username: system:node:{{EC2PrivateDNSName}}
+      groups:
+        - system:bootstrappers
+        - system:nodes
+CONFIGMAPAWSAUTH
+
+}
+
+output "config_map_aws_auth" {
+  value = local.config_map_aws_auth
 }

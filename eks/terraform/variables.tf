@@ -5,7 +5,7 @@ variable "region" {
 
 #note that "rd" here stands for "rapid deploy"
 variable "cluster-name" {
-  default = "eks-rd"
+  default = "somename"
   type    = string
 }
 
@@ -22,6 +22,10 @@ variable "workstation_ips" {
     {
       name = "Vince"
       ip   = "71.57.76.171/32"
+    },
+    {
+      name = "Han"
+      ip   = "104.159.208.240/32"
     }
   ]
 }
