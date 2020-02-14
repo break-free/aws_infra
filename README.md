@@ -69,4 +69,5 @@ You should now be able to deploy K8 apps with `kubectl`
 * [Amazon EKS User Guide](https://docs.aws.amazon.com/eks/latest/userguide/eks-ug.pdf)
 * [Terraform - AWS EKS Introduction](https://learn.hashicorp.com/terraform/aws/eks-intro)
 * [Create Kubeconfig for Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html)
+* [Manage Users or IAM Roles for your Cluster](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html)
 * [Terraform - Remote State](https://www.terraform.io/docs/state/remote.html)
