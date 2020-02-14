@@ -50,44 +50,11 @@ USERDATA
 
 }
 
-resource "aws_launch_configuration" "rd" {
-  associate_public_ip_address = true
-  image_id                    = data.aws_ami.eks-worker.id
-  instance_type               = "m4.large"
-  name_prefix                 = "terraform-eks-rd"
-  security_groups  = [aws_security_group.rd-node.id]
-  user_data_base64 = base64encode(local.rd-node-userdata)
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-resource "aws_autoscaling_group" "rd" {
-  desired_capacity     = 2
-  launch_configuration = aws_launch_configuration.rd.id
-  max_size             = 2
-  min_size             = 1
-  name                 = "terraform-eks-rd"
-  vpc_zone_identifier = aws_subnet.eks-rd-subnet.*.id
-
-  tag {
-    key                 = "Name"
-    value               = "terraform-eks-rd"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "kubernetes.io/cluster/${var.cluster-name}"
-    value               = "owned"
-    propagate_at_launch = true
-  }
-}
-
 resource "aws_vpc" "eks-rd-vpc" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
-    "Name"                                      = "terraform-eks-rd-node"
+    Name                                      = "terraform-eks-rd-node"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
@@ -100,7 +67,7 @@ resource "aws_subnet" "eks-rd-subnet" {
   vpc_id            = aws_vpc.eks-rd-vpc.id
 
   tags = {
-    "Name"                                      = "terraform-eks-rd-node"
+    Name                                      = "terraform-eks-rd-node"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
@@ -265,6 +232,7 @@ resource "aws_security_group_rule" "rd-node-ingress-cluster" {
  }
 
 resource "aws_security_group_rule" "rd-cluster-ingress-node-https" {
+  
   description              = "Allow pods to communicate with the cluster API Server"
   from_port                = 443
   protocol                 = "tcp"
@@ -311,7 +279,38 @@ resource "aws_eks_node_group" "rd-eks-node-group"{
   ]
 }
 
+resource "aws_launch_configuration" "rd" {
+  associate_public_ip_address = true
+  image_id                    = data.aws_ami.eks-worker.id
+  instance_type               = "t3.small"
+  name_prefix                 = "terraform-eks-rd"
+  security_groups  = [aws_security_group.rd-node.id]
+  user_data_base64 = base64encode(local.rd-node-userdata)
 
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+resource "aws_autoscaling_group" "rd" {
+  desired_capacity     = 2
+  launch_configuration = aws_launch_configuration.rd.id
+  max_size             = 2
+  min_size             = 1
+  name                 = "terraform-eks-rd"
+  vpc_zone_identifier = aws_subnet.eks-rd-subnet.*.id
+
+  tag {
+    key                 = "Name"
+    value               = "terraform-eks-rd"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "kubernetes.io/cluster/${var.cluster-name}"
+    value               = "owned"
+    propagate_at_launch = true
+  }
+}
 # Join Node to Cluster:
 # 1. Run terraform output config_map_aws_auth and save the configuration into a file, e.g. config_map_aws_auth.yaml
 # 2. Run kubectl apply -f config_map_aws_auth.yaml
