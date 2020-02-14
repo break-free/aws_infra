@@ -1,1 +1,1 @@
-cluster-name = "somename"
+cluster-name = "eks-rd"
