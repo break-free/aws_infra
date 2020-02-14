@@ -50,44 +50,11 @@ USERDATA
 
 }
 
-resource "aws_launch_configuration" "rd" {
-  associate_public_ip_address = true
-  image_id                    = data.aws_ami.eks-worker.id
-  instance_type               = "m4.large"
-  name_prefix                 = "terraform-eks-rd"
-  security_groups  = [aws_security_group.rd-node.id]
-  user_data_base64 = base64encode(local.rd-node-userdata)
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-resource "aws_autoscaling_group" "rd" {
-  desired_capacity     = 2
-  launch_configuration = aws_launch_configuration.rd.id
-  max_size             = 2
-  min_size             = 1
-  name                 = "terraform-eks-rd"
-  vpc_zone_identifier = aws_subnet.eks-rd-subnet.*.id
-
-  tag {
-    key                 = "Name"
-    value               = "terraform-eks-rd"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "kubernetes.io/cluster/${var.cluster-name}"
-    value               = "owned"
-    propagate_at_launch = true
-  }
-}
-
 resource "aws_vpc" "eks-rd-vpc" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
-    "Name"                                      = "terraform-eks-rd-node"
+    Name                                      = "terraform-eks-rd-node"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
@@ -100,7 +67,7 @@ resource "aws_subnet" "eks-rd-subnet" {
   vpc_id            = aws_vpc.eks-rd-vpc.id
 
   tags = {
-    "Name"                                      = "terraform-eks-rd-node"
+    Name                                      = "terraform-eks-rd-node"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
@@ -129,8 +96,8 @@ resource "aws_route_table_association" "terraform-eks-rd" {
   route_table_id = aws_route_table.terraform-eks-rd-routetable.id
 }
 
-# Master Cluster and Cluster Role
-resource "aws_iam_role" "rd-node" {
+# IAM Master Cluster and Service Role
+resource "aws_iam_role" "rd-cluster" {
   name = "terraform-eks-rd-cluster"
 
   assume_role_policy = <<POLICY
@@ -151,11 +118,41 @@ POLICY
 
 resource "aws_iam_role_policy_attachment" "rd-cluster-AmazonEKSClusterPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.rd-node.name
+  role       = aws_iam_role.rd-cluster.name
 }
 
 resource "aws_iam_role_policy_attachment" "rd-cluster-AmazonEKSServicePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
+  role       = aws_iam_role.rd-cluster.name
+}
+# IAM node role
+resource "aws_iam_role" "rd-node" {
+  name = "eks-node-group-rd"
+
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+    Version = "2012-10-17"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "rd-node-AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.rd-node.name
+}
+
+resource "aws_iam_role_policy_attachment" "rd-node-AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.rd-node.name
+}
+
+resource "aws_iam_role_policy_attachment" "rd-node-AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.rd-node.name
 }
 
@@ -235,6 +232,7 @@ resource "aws_security_group_rule" "rd-node-ingress-cluster" {
  }
 
 resource "aws_security_group_rule" "rd-cluster-ingress-node-https" {
+  
   description              = "Allow pods to communicate with the cluster API Server"
   from_port                = 443
   protocol                 = "tcp"
@@ -247,7 +245,7 @@ resource "aws_security_group_rule" "rd-cluster-ingress-node-https" {
 
 resource "aws_eks_cluster" "rd-eks-cluster" {
   name            = var.cluster-name
-  role_arn        = aws_iam_role.rd-node.arn
+  role_arn        = aws_iam_role.rd-cluster.arn
 
   vpc_config {
     security_group_ids = [aws_security_group.rd-cluster.id]
@@ -260,6 +258,59 @@ resource "aws_eks_cluster" "rd-eks-cluster" {
   ]
 }
 
+resource "aws_eks_node_group" "rd-eks-node-group"{
+  cluster_name    = aws_eks_cluster.rd-eks-cluster.name
+  node_group_name = "rd-node-group"
+  node_role_arn   = aws_iam_role.rd-node.arn
+  subnet_ids      = aws_subnet.eks-rd-subnet[*].id
+
+  scaling_config {
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
+  }
+
+  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
+  # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
+  depends_on = [
+    aws_iam_role_policy_attachment.rd-node-AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.rd-node-AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.rd-node-AmazonEC2ContainerRegistryReadOnly,
+  ]
+}
+
+resource "aws_launch_configuration" "rd" {
+  associate_public_ip_address = true
+  image_id                    = data.aws_ami.eks-worker.id
+  instance_type               = "t3.small"
+  name_prefix                 = "terraform-eks-rd"
+  security_groups  = [aws_security_group.rd-node.id]
+  user_data_base64 = base64encode(local.rd-node-userdata)
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+resource "aws_autoscaling_group" "rd" {
+  desired_capacity     = 2
+  launch_configuration = aws_launch_configuration.rd.id
+  max_size             = 2
+  min_size             = 1
+  name                 = "terraform-eks-rd"
+  vpc_zone_identifier = aws_subnet.eks-rd-subnet.*.id
+
+  tag {
+    key                 = "Name"
+    value               = "terraform-eks-rd"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "kubernetes.io/cluster/${var.cluster-name}"
+    value               = "owned"
+    propagate_at_launch = true
+  }
+}
 # Join Node to Cluster:
 # 1. Run terraform output config_map_aws_auth and save the configuration into a file, e.g. config_map_aws_auth.yaml
 # 2. Run kubectl apply -f config_map_aws_auth.yaml
@@ -276,7 +327,7 @@ metadata:
   namespace: kube-system
 data:
   mapRoles: |
-    - rolearn: ${aws_iam_role.rd-node.arn}
+    - rolearn: ${aws_iam_role.rd-cluster.arn}
       username: system:node:{{EC2PrivateDNSName}}
       groups:
         - system:bootstrappers

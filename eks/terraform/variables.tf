@@ -5,7 +5,7 @@ variable "region" {
 
 #note that "rd" here stands for "rapid deploy"
 variable "cluster-name" {
-  default = "somename"
+  default = "eks-rd"
   type    = string
 }
 
