@@ -31,18 +31,18 @@ You'll deploy the AWS Elastice Kubernetes Service (EKS) control plan with one no
 ### Cluster Configuration
 1. Point `kubectl` to your EKS instance
 `aws eks --region <region> update-kubeconfig --name <cluster_name>`
-2. Join Node Group to EKS cluster
+1. Join node group to cluster
    1. Redirect Terraform output into an `.yaml`
     `terraform output config_map_aws_auth > config_map_aws_auth.yaml`
    2. Apply mapping
     `kubectl apply -f config_map_aws_auth.yaml`
    3. Check if the nodes have joined
     `kubectl get nodes --watch`
-3. \<optional> add permissions to EKS cluster
+2. \<optional> add permissions to EKS cluster
    * K8 automatically grants `system:masters` to user that creates the cluster; you may grant RBAC to other using the same `config_map` uploaded in step 2
     1. Open `aws-auth` config map
     `kubectl edit -n kube-system configmap/aws-auth`
-    2. Add or Modify `mapUsers` section; your map might look like this
+    1. Add or Modify `mapUsers` section; your map might look like this
     ```
     apiVersion: v1
     data:
@@ -64,6 +64,8 @@ You'll deploy the AWS Elastice Kubernetes Service (EKS) control plan with one no
     ```
 # Next step
 You should now be able to deploy K8 apps with `kubectl`
+
+A sample app and with public ingress is provided in `/test app`
 
 # Resource
 * [Amazon EKS User Guide](https://docs.aws.amazon.com/eks/latest/userguide/eks-ug.pdf)

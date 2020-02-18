@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: cheese
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: a31a66cc34f7911eab21302960189a66-3105244cd5ea4f18.elb.us-west-2.amazonaws.com
+    http:
+      paths:
+      - path: /stilton
+        backend:
+          serviceName: stilton
+          servicePort: 80
+      - path: /cheddar
+        backend:
+          serviceName: cheddar
+          servicePort: 80
+      - path: /wensleydale
+        backend:
+          serviceName: wensleydale
+          servicePort: 80
