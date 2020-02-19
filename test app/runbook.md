@@ -25,9 +25,9 @@
 2. Determine public DNS for ELB for EKS cluster
    * `aws elbv2 describe-load-balancers --query LoadBalancers[*].[DNSName,VpcId] --output text | grep vpc-0ad407958caf2f18b | awk '{print $1}'`
 3. You should be able to pull up these three web pages:
-    1. `<DNS_from_step2>\cheddar`
-    2. `<DNS_from_step2>\stilton`
-    3. `<DNS_from_step2>\wensleydale`
+    1. `<DNS_from_step2>/cheddar`
+    2. `<DNS_from_step2>/stilton`
+    3. `<DNS_from_step2>/wensleydale`
 
 
 # References
