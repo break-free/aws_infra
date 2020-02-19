@@ -9,15 +9,7 @@ spec:
   - host: a31a66cc34f7911eab21302960189a66-3105244cd5ea4f18.elb.us-west-2.amazonaws.com
     http:
       paths:
-      - path: /stilton
-        backend:
-          serviceName: stilton
-          servicePort: 80
-      - path: /cheddar
+      - path: /
         backend:
           serviceName: cheddar
-          servicePort: 80
-      - path: /wensleydale
-        backend:
-          serviceName: wensleydale
-          servicePort: 80
+          servicePort: 80 
