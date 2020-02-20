@@ -278,39 +278,59 @@ resource "aws_eks_node_group" "rd-eks-node-group"{
     aws_iam_role_policy_attachment.rd-node-AmazonEC2ContainerRegistryReadOnly,
   ]
 }
+resource "aws_eks_node_group" "rd-eks-node-group-2"{
+  cluster_name    = aws_eks_cluster.rd-eks-cluster.name
+  node_group_name = "rd-node-group-2"
+  node_role_arn   = aws_iam_role.rd-node.arn
+  subnet_ids      = aws_subnet.eks-rd-subnet[*].id
 
-resource "aws_launch_configuration" "rd" {
-  associate_public_ip_address = true
-  image_id                    = data.aws_ami.eks-worker.id
-  instance_type               = "t3.small"
-  name_prefix                 = "terraform-eks-rd"
-  security_groups  = [aws_security_group.rd-node.id]
-  user_data_base64 = base64encode(local.rd-node-userdata)
-
-  lifecycle {
-    create_before_destroy = true
+  scaling_config {
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
   }
+
+  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
+  # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
+  depends_on = [
+    aws_iam_role_policy_attachment.rd-node-AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.rd-node-AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.rd-node-AmazonEC2ContainerRegistryReadOnly,
+  ]
 }
-resource "aws_autoscaling_group" "rd" {
-  desired_capacity     = 2
-  launch_configuration = aws_launch_configuration.rd.id
-  max_size             = 2
-  min_size             = 1
-  name                 = "terraform-eks-rd"
-  vpc_zone_identifier = aws_subnet.eks-rd-subnet.*.id
 
-  tag {
-    key                 = "Name"
-    value               = "terraform-eks-rd"
-    propagate_at_launch = true
-  }
+# resource "aws_launch_configuration" "rd" {
+#   associate_public_ip_address = true
+#   image_id                    = data.aws_ami.eks-worker.id
+#   instance_type               = "t3.small"
+#   name_prefix                 = "terraform-eks-rd"
+#   security_groups  = [aws_security_group.rd-node.id]
+#   user_data_base64 = base64encode(local.rd-node-userdata)
 
-  tag {
-    key                 = "kubernetes.io/cluster/${var.cluster-name}"
-    value               = "owned"
-    propagate_at_launch = true
-  }
-}
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
+# resource "aws_autoscaling_group" "rd" {
+#   desired_capacity     = 2
+#   launch_configuration = aws_launch_configuration.rd.id
+#   max_size             = 2
+#   min_size             = 1
+#   name                 = "terraform-eks-rd"
+#   vpc_zone_identifier = aws_subnet.eks-rd-subnet.*.id
+
+#   tag {
+#     key                 = "Name"
+#     value               = "terraform-eks-rd"
+#     propagate_at_launch = true
+#   }
+
+#   tag {
+#     key                 = "kubernetes.io/cluster/${var.cluster-name}"
+#     value               = "owned"
+#     propagate_at_launch = true
+#   }
+# }
 # Join Node to Cluster:
 # 1. Run terraform output config_map_aws_auth and save the configuration into a file, e.g. config_map_aws_auth.yaml
 # 2. Run kubectl apply -f config_map_aws_auth.yaml
