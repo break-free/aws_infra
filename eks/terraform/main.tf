@@ -260,6 +260,7 @@ resource "aws_eks_cluster" "jtian-eks-cluster" {
 
 resource "aws_eks_node_group" "rd-eks-node-group"{
   count = 2
+  instance_types =  "t3.small"
   cluster_name    = aws_eks_cluster.jtian-eks-cluster.name
   node_group_name = "rd-node-group ${count.index}"
   node_role_arn   = aws_iam_role.rd-node.arn
@@ -279,28 +280,7 @@ resource "aws_eks_node_group" "rd-eks-node-group"{
     aws_iam_role_policy_attachment.rd-node-AmazonEC2ContainerRegistryReadOnly,
   ]
 }
-resource "aws_eks_node_group" "rd-eks-node-group-2"{
-  cluster_name    = aws_eks_cluster.jtian-eks-cluster.name
-  node_group_name = "rd-node-group-2"
-  node_role_arn   = aws_iam_role.rd-node.arn
-  subnet_ids      = aws_subnet.eks-rd-subnet[*].id
 
-  scaling_config {
-    desired_size = 1
-    max_size     = 1
-    min_size     = 1
-  }
-
-  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
-  # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
-  depends_on = [
-    aws_iam_role_policy_attachment.rd-node-AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.rd-node-AmazonEKS_CNI_Policy,
-    aws_iam_role_policy_attachment.rd-node-AmazonEC2ContainerRegistryReadOnly,
-  ]
-}
-
-# Join Node to Cluster:
 # 1. Run terraform output config_map_aws_auth and save the configuration into a file, e.g. config_map_aws_auth.yaml
 # 2. Run kubectl apply -f config_map_aws_auth.yaml
 # 3. You can verify the worker nodes are joining the cluster via: kubectl get nodes --watch
