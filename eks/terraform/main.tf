@@ -1,12 +1,12 @@
 provider "aws" {
   version = "~> 2.2"
-  region     = "${var.region}"
+  region     = "us-west-2"
 }
 
 terraform {
   backend "s3" {
-    region = "${var.region}"
-    bucket = "${var.cluster-name}tfstate"
+    region = "us-west-2"
+    bucket = "rdtfstate2"
     key = "terraform.tfstate"
     dynamodb_table = "terraform-state-lock"
     encrypt = true    #AES-256 encryption
@@ -24,7 +24,7 @@ data "aws_availability_zones" "available" {}
 data "aws_ami" "eks-worker" {
    filter {
      name   = "name"
-     values = ["amazon-eks-node-${aws_eks_cluster.jtian-eks-cluster.version}-v*"]
+     values = ["amazon-eks-node-${aws_eks_cluster.rd-eks-cluster.version}-v*"]
    }
 
    most_recent = true
@@ -45,7 +45,7 @@ locals {
   rd-node-userdata = <<USERDATA
 #!/bin/bash
 set -o xtrace
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.jtian-eks-cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.jtian-eks-cluster.certificate_authority[0].data}' '${var.cluster-name}'
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.rd-eks-cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.rd-eks-cluster.certificate_authority[0].data}' '${var.cluster-name}'
 USERDATA
 
 }
@@ -243,7 +243,7 @@ resource "aws_security_group_rule" "rd-cluster-ingress-node-https" {
 }
 # The EKS Master Cluster
 
-resource "aws_eks_cluster" "jtian-eks-cluster" {
+resource "aws_eks_cluster" "rd-eks-cluster" {
   name            = var.cluster-name
   role_arn        = aws_iam_role.rd-cluster.arn
 
@@ -260,8 +260,7 @@ resource "aws_eks_cluster" "jtian-eks-cluster" {
 
 resource "aws_eks_node_group" "rd-eks-node-group"{
   count = 2
-  instance_types =  "t3.small"
-  cluster_name    = aws_eks_cluster.jtian-eks-cluster.name
+  cluster_name    = aws_eks_cluster.rd-eks-cluster.name
   node_group_name = "rd-node-group ${count.index}"
   node_role_arn   = aws_iam_role.rd-node.arn
   subnet_ids      = aws_subnet.eks-rd-subnet[*].id
