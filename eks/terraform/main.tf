@@ -261,7 +261,7 @@ resource "aws_eks_cluster" "rd-eks-cluster" {
 resource "aws_eks_node_group" "rd-eks-node-group"{
   count = 2
   cluster_name    = aws_eks_cluster.rd-eks-cluster.name
-  node_group_name = "rd-node-group ${count.index}"
+  node_group_name = "rd-node-group-${count.index}"
   node_role_arn   = aws_iam_role.rd-node.arn
   subnet_ids      = aws_subnet.eks-rd-subnet[*].id
 
