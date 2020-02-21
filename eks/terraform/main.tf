@@ -1,12 +1,12 @@
 provider "aws" {
   version = "~> 2.2"
-  region     = var.region
+  region     = "${var.region}"
 }
 
 terraform {
   backend "s3" {
-    region = "us-west-2"
-    bucket = "rdtfstate2"
+    region = "${var.region}"
+    bucket = "${var.cluster-name}tfstate"
     key = "terraform.tfstate"
     dynamodb_table = "terraform-state-lock"
     encrypt = true    #AES-256 encryption
@@ -24,7 +24,7 @@ data "aws_availability_zones" "available" {}
 data "aws_ami" "eks-worker" {
    filter {
      name   = "name"
-     values = ["amazon-eks-node-${aws_eks_cluster.rd-eks-cluster.version}-v*"]
+     values = ["amazon-eks-node-${aws_eks_cluster.jtian-eks-cluster.version}-v*"]
    }
 
    most_recent = true
@@ -45,7 +45,7 @@ locals {
   rd-node-userdata = <<USERDATA
 #!/bin/bash
 set -o xtrace
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.rd-eks-cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.rd-eks-cluster.certificate_authority[0].data}' '${var.cluster-name}'
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.jtian-eks-cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.jtian-eks-cluster.certificate_authority[0].data}' '${var.cluster-name}'
 USERDATA
 
 }
@@ -54,7 +54,7 @@ resource "aws_vpc" "eks-rd-vpc" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
-    Name                                      = "terraform-eks-rd-node"
+    Name                                      = "terraform-eks-${var.cluster-name}"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
@@ -67,7 +67,7 @@ resource "aws_subnet" "eks-rd-subnet" {
   vpc_id            = aws_vpc.eks-rd-vpc.id
 
   tags = {
-    Name                                      = "terraform-eks-rd-node"
+    Name                                      = "terraform-eks-${var.cluster-name}"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
@@ -98,7 +98,7 @@ resource "aws_route_table_association" "terraform-eks-rd" {
 
 # IAM Master Cluster and Service Role
 resource "aws_iam_role" "rd-cluster" {
-  name = "terraform-eks-rd-cluster"
+  name = "terraform-eks-${var.cluster-name}"
 
   assume_role_policy = <<POLICY
 {
@@ -127,7 +127,7 @@ resource "aws_iam_role_policy_attachment" "rd-cluster-AmazonEKSServicePolicy" {
 }
 # IAM node role
 resource "aws_iam_role" "rd-node" {
-  name = "eks-node-group-rd"
+  name = "eks-node-group-${var.cluster-name}"
 
   assume_role_policy = jsonencode({
     Statement = [{
@@ -159,7 +159,7 @@ resource "aws_iam_role_policy_attachment" "rd-node-AmazonEC2ContainerRegistryRea
 # EKS Master Cluster Security Group
 
 resource "aws_security_group" "rd-cluster" {
-  name        = "terraform-eks-rd-cluster"
+  name        = "terraform-eks-cluster-${var.cluster-name}"
   description = "Cluster communication with worker nodes"
   vpc_id      = aws_vpc.eks-rd-vpc.id
 
@@ -171,7 +171,7 @@ resource "aws_security_group" "rd-cluster" {
   }
 
   tags = {
-    Name = "terraform-eks-rd"
+    Name = "terraform-eks-cluster-${var.cluster-name}"
   }
 }
 
@@ -192,7 +192,7 @@ resource "aws_security_group_rule" "rd-cluster-ingress-workstation-https" {
 # EKS Node Security Group
 
 resource "aws_security_group" "rd-node" {
-  name        = "terraform-eks-rd-node"
+  name        = "terraform-eks-node-${var.cluster-name}"
   description = "Security group for all nodes in the cluster"
   vpc_id      = aws_vpc.eks-rd-vpc.id
 
@@ -204,7 +204,7 @@ resource "aws_security_group" "rd-node" {
   }
 
   tags = {
-    "Name"                                      = "terraform-eks-rd-node"
+    "Name"                                      = "terraform-eks-node-${var.cluster-name}"
     "kubernetes.io/cluster/${var.cluster-name}" = "owned"
   }
 }
@@ -243,7 +243,7 @@ resource "aws_security_group_rule" "rd-cluster-ingress-node-https" {
 }
 # The EKS Master Cluster
 
-resource "aws_eks_cluster" "rd-eks-cluster" {
+resource "aws_eks_cluster" "jtian-eks-cluster" {
   name            = var.cluster-name
   role_arn        = aws_iam_role.rd-cluster.arn
 
@@ -259,8 +259,9 @@ resource "aws_eks_cluster" "rd-eks-cluster" {
 }
 
 resource "aws_eks_node_group" "rd-eks-node-group"{
-  cluster_name    = aws_eks_cluster.rd-eks-cluster.name
-  node_group_name = "rd-node-group"
+  count = 2
+  cluster_name    = aws_eks_cluster.jtian-eks-cluster.name
+  node_group_name = "rd-node-group ${count.index}"
   node_role_arn   = aws_iam_role.rd-node.arn
   subnet_ids      = aws_subnet.eks-rd-subnet[*].id
 
@@ -279,7 +280,7 @@ resource "aws_eks_node_group" "rd-eks-node-group"{
   ]
 }
 resource "aws_eks_node_group" "rd-eks-node-group-2"{
-  cluster_name    = aws_eks_cluster.rd-eks-cluster.name
+  cluster_name    = aws_eks_cluster.jtian-eks-cluster.name
   node_group_name = "rd-node-group-2"
   node_role_arn   = aws_iam_role.rd-node.arn
   subnet_ids      = aws_subnet.eks-rd-subnet[*].id
@@ -299,38 +300,6 @@ resource "aws_eks_node_group" "rd-eks-node-group-2"{
   ]
 }
 
-# resource "aws_launch_configuration" "rd" {
-#   associate_public_ip_address = true
-#   image_id                    = data.aws_ami.eks-worker.id
-#   instance_type               = "t3.small"
-#   name_prefix                 = "terraform-eks-rd"
-#   security_groups  = [aws_security_group.rd-node.id]
-#   user_data_base64 = base64encode(local.rd-node-userdata)
-
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
-# resource "aws_autoscaling_group" "rd" {
-#   desired_capacity     = 2
-#   launch_configuration = aws_launch_configuration.rd.id
-#   max_size             = 2
-#   min_size             = 1
-#   name                 = "terraform-eks-rd"
-#   vpc_zone_identifier = aws_subnet.eks-rd-subnet.*.id
-
-#   tag {
-#     key                 = "Name"
-#     value               = "terraform-eks-rd"
-#     propagate_at_launch = true
-#   }
-
-#   tag {
-#     key                 = "kubernetes.io/cluster/${var.cluster-name}"
-#     value               = "owned"
-#     propagate_at_launch = true
-#   }
-# }
 # Join Node to Cluster:
 # 1. Run terraform output config_map_aws_auth and save the configuration into a file, e.g. config_map_aws_auth.yaml
 # 2. Run kubectl apply -f config_map_aws_auth.yaml
