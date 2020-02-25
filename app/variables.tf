@@ -2,7 +2,7 @@ variable "nginx_ingress_source" {
     type = string
     default = "https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml"
 }
-variable "AWS_NLB_rules_source" {
+variable "ECR_cheddar" {
     type = string
-    default = "https://raw.githubusercontent.com/cornellanthony/nlb-nginxIngress-eks/master/nlb-service.yaml"
+    default = "146452989591.dkr.ecr.us-west-2.amazonaws.com/cheddar:latest"
 }
