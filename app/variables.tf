@@ -1,4 +1,4 @@
-variable "nginx_ingress_source" {
+variable "ingress_nginx_source" {
     type = string
     default = "https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml"
 }
