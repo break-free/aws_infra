@@ -1,3 +1,2 @@
 cluster-name = "eks-rd"
-region = "us-west-2"git config
-fsdf
+region = "us-west-2"
