@@ -288,9 +288,22 @@ resource "kubernetes_ingress" "ingress_nginx" {
         annotations = {
             # nginx 0.22+ requires regex for rewrite-target 
             # https://github.com/kubernetes/ingress-nginx/releases/tag/nginx-0.22.0
-            "nginx.ingress.kubernetes.io/rewrite-target" = "/$2"
+            "nginx.ingress.kubernetes.io/rewrite-target" = "/$1"
             # defaults to one of the apps
             "nginx.ingress.kubernetes.io/app-root" = "/cheddar/"
+            # adds trailing slash to explictly call a diretory/app e.g. $host/cheddar -> $host/cheddar/
+            # 
+            # otherwise, web server returns incomplete URL initiator for subsequent request to ingress
+            # $host/cheddar --[ browser returns ]--> $host --[ client looks for resource ]--> $host/image.jpg --[ ingress ]--> not found
+            # 
+            # the fix resolves to:
+            # $host/cheddar --[ browser returns ]--> $host/cheddar/ --[client looks for resource ]--> $host/cheddar/image.jpg --[ ingress ]--> success!
+            #
+            # inspirations:
+            # https://github.com/kubernetes/ingress-nginx/issues/3148#issuecomment-430894430
+            # https://medium.com/@smoco/fighting-trailing-slash-problem-c0416023d20e (different ingress controller; similar concept)
+            #
+            "nginx.ingress.kubernetes.io/configuration-snippet" =  "rewrite (?i)/([^/.]+)$ /$1/ permanent;"
         }
     }
     spec {
@@ -301,7 +314,7 @@ resource "kubernetes_ingress" "ingress_nginx" {
 
                 path {
                     # defaults to one of the apps
-                    path = "/"
+                    path = "/?$"
                     backend {
                         service_name = kubernetes_service.cheddar.metadata[0].name
                         service_port = kubernetes_service.cheddar.spec[0].port[0].port
@@ -314,7 +327,7 @@ resource "kubernetes_ingress" "ingress_nginx" {
                     # /cheddar --> /
                     # /cheddar/ --> /
                     # /cheddar/example --> /example
-                    path = "/cheddar(/|$)(.*)"
+                    path = "/cheddar/?(.*)"
                     backend {
                         # match service name and port (not target_port)
                         service_name = kubernetes_service.cheddar.metadata[0].name
@@ -324,7 +337,7 @@ resource "kubernetes_ingress" "ingress_nginx" {
 
                 path {
                     # updated for nginx 0.22+
-                    path = "/stilton(/|$)(.*)"
+                    path = "/stilton/?(.*)"
                     backend {
                         # match service name and port (not target_port)
                         service_name = kubernetes_service.stilton.metadata[0].name
@@ -334,7 +347,7 @@ resource "kubernetes_ingress" "ingress_nginx" {
                 
                 path {
                     # updated for nginx 0.22+
-                    path = "/wensleydale(/|$)(.*)"
+                    path = "/wensleydale/?(.*)"
                     backend {
                         # match service name and port (not target_port)
                         service_name = kubernetes_service.wensleydale.metadata[0].name
