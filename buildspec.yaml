@@ -25,9 +25,7 @@ phases:
       # Chocolatey 
       - "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
       # AWS CLI, Terraform, Kubectl
-      - choco install awscli
-      - choco install terraform
-      - choco install kubernetes-cli
+      - choco install -yv awscli terraform kubernetes-cli
   #pre_build:
   build:
     commands:
