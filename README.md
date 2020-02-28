@@ -65,7 +65,7 @@ You'll deploy the AWS Elastice Kubernetes Service (EKS) control plan with one no
 # Next step
 You should now be able to deploy K8 apps with `kubectl`
 
-A sample app and with public ingress is provided in `/test app`
+A sample app and with public ingress is provided in `/app`
 
 # Resource
 * [Amazon EKS User Guide](https://docs.aws.amazon.com/eks/latest/userguide/eks-ug.pdf)
