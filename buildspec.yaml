@@ -1,9 +1,13 @@
+# resource
+# https://www.padok.fr/en/blog/codepipeline-eks-helm
+
 version: 0.2
 
-#env:
-  #variables:
-     # key: "value"
-     # key: "value"
+env:
+  variables:
+    REGION: "value"
+    CLUSTER_NAME: "value"
+    PROJECT_NAME: "value"
   #parameter-store:
      # key: "value"
      # key: "value"
@@ -16,28 +20,58 @@ version: 0.2
   #git-credential-helper: yes
 
 phases:
-  #install:
-    #If you use the Ubuntu standard image 2.0 or later, you must specify runtime-versions.
-    #If you specify runtime-versions and use an image other than Ubuntu standard image 2.0, the build fails.
-    #runtime-versions:
-      # name: version
-      # name: version
-    #commands:
-      # - command
-      # - command
-  #pre_build:
-    #commands:
-      # - command
-      # - command
+  install: # Install Chocolatey, AWS CLI, Terraform, Kubectl
+    commands:
+      # Chocolatey 
+      - "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+      # AWS CLI, Terraform, Kubectl
+      - choco install awscli
+      - choco install terraform
+      - choco upgrade kubernetes-cli
+  pre_build:
   build:
     commands:
+      
+      # Remote backend
+      - push-location; set-location remote-backend
+      #! TODO - confirm usage
+      - .\backend_setup.ps1 $PROJECT_NAME $REGION
+
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
-  #post_build:
-    #commands:
-      # - command
-      # - command
+      - pop-location
+      
+      # EKS
+      - push-location; set-location eks\terraform
+      #! TODO - confirm usage
+      - .\terrafrom_setup.ps1 $PROJECT_NAME $REGION
+
+      - terraform init -input=false
+      - terraform plan -out=tfplan -input=false
+      - terraform apply -input=false tfplan
+      ## point kubectl to eks
+      - aws eks --region $REGION update-kubeconfig --name $CLUSTER_NAME
+      ## config EKS permissions
+      - terraform output config_map_aws_auth > config_map_aws_auth.yaml
+      #! TODO shove in user mapping
+      - 
+      ## join node and add permissions
+      - kubectl apply -f config_map_aws_auth.yaml
+      - pop-location
+      
+      # app
+      - push-location; set-location app
+      #! TODO - confirm usage
+      - .\app_setup.ps1 $PROJECT_NAME $REGION
+
+      - terraform init -input=false
+      - terraform plan -out=tfplan -input=false
+      - terraform apply -input=false tfplan
+  post_build:
+    commands: # write the site URL to stdout
+      - write-host "[INFO] site URL:`n`n$(terraform output hostname)`n"
+      - pop-location
 #reports:
   #report-name-or-arn:
     #files:
