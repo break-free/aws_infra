@@ -5,3 +5,6 @@ ECR_image = {
     stilton = "146452989591.dkr.ecr.us-west-2.amazonaws.com/stilton:latest",
     wensleydale = "146452989591.dkr.ecr.us-west-2.amazonaws.com/wensleydale:latest"
 }
+
+cluster-name = "default_project_name"
+region = "us-west-2"
