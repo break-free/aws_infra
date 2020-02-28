@@ -27,8 +27,8 @@ phases:
       # AWS CLI, Terraform, Kubectl
       - choco install awscli
       - choco install terraform
-      - choco upgrade kubernetes-cli
-  pre_build:
+      - choco install kubernetes-cli
+  #pre_build:
   build:
     commands:
       
