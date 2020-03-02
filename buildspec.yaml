@@ -6,8 +6,9 @@ version: 0.2
 env:
   variables:
     REGION: "us-west-2"
-    CLUSTER_NAME: "eks-rd"
+    CLUSTER_NAME: "eks-rd-2"
     PROJECT_NAME: "rdtf"
+    USERS: "arn:aws:iam::146452989591:user/Han.Tu"
   #parameter-store:
      # key: "value"
      # key: "value"
@@ -26,15 +27,20 @@ phases:
       - "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
       # AWS CLI, Terraform, Kubectl
       - choco install -yv awscli terraform kubernetes-cli
-  #pre_build:
+  pre_build:
+    commands:
   build:
     commands:
-      
+    
       # Remote backend
       - push-location; set-location remote-backend
-      #! TODO - confirm usage
+      # check for pre-exiting storage and DynamoDB; add to current TF instance 
+      - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
+      - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-app-state`"") {terraform aws_s3_bucket.tf-state-storage-app $PROJECT_NAME-app-state}
+      - if(aws DynamoDB list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform aws_dynamodb_table.dynbanodb-terraform-state-lock $PROJECT_NAME-state-lock}
+      - if(aws DynamoDB list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
+      #run TF for backend
       - .\backend_setup.ps1 $PROJECT_NAME $REGION
-
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
@@ -42,9 +48,8 @@ phases:
       
       # EKS
       - push-location; set-location eks\terraform
-      #! TODO - confirm usage
+      # run TF for EKS
       - .\terrafrom_setup.ps1 $PROJECT_NAME $REGION
-
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
@@ -52,8 +57,9 @@ phases:
       - aws eks --region $REGION update-kubeconfig --name $CLUSTER_NAME
       ## config EKS permissions
       - terraform output config_map_aws_auth > config_map_aws_auth.yaml
-      #! TODO shove in user mapping
-      - 
+      # Shove in user mapping
+      - $MAP_USER = get-content .\map_user.yaml; $USERS = $USERS.split("/")
+      - $MAP_USER -replace "<arn>", $USERS[0] -replace "<user>", $USERS[1] >> .\config_map_aws_auth.yaml
       ## join node and add permissions
       - kubectl apply -f config_map_aws_auth.yaml
       - pop-location
@@ -66,10 +72,10 @@ phases:
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
-  post_build:
-    commands: # write the site URL to stdout
       - write-host "[INFO] site URL:`n`n$(terraform output hostname)`n"
       - pop-location
+  #post_build:
+    #commands: 
 #reports:
   #report-name-or-arn:
     #files:

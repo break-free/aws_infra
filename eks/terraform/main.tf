@@ -1,12 +1,12 @@
 provider "aws" {
   version = "~> 2.2"
-  region     = "default_region"
+  region     = "us-west-2"
 }
 
 terraform {
   backend "s3" {
-    region = "default_region"
-    bucket = "default_project_name-state"
+    region = "us-west-2"
+    bucket = "rdtfstate"
     key = "terraform.tfstate"
     dynamodb_table = "terraform-state-lock"
     encrypt = true    #AES-256 encryption
