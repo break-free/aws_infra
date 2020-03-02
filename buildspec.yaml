@@ -34,7 +34,7 @@ phases:
     commands:
     
       # Remote backend
-      - push-location; set-location remote-backend
+      - set-location remote-backend
       - terraform init -input=false
       # check for pre-exiting storage and DynamoDB; add to current TF instance 
       - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform import aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
@@ -45,10 +45,9 @@ phases:
       - .\backend_setup.ps1 $PROJECT_NAME $REGION
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
-      - pop-location
       
       # EKS
-      - push-location; set-location eks\terraform
+      - set-location ..\eks\terraform
       # run TF for EKS
       - .\terrafrom_setup.ps1 $PROJECT_NAME $REGION
       - terraform init -input=false
@@ -63,10 +62,9 @@ phases:
       - $MAP_USER -replace "<arn>", $USERS[0] -replace "<user>", $USERS[1] >> .\config_map_aws_auth.yaml
       ## join node and add permissions
       - kubectl apply -f config_map_aws_auth.yaml
-      - pop-location
       
       # app
-      - push-location; set-location app
+      - set-location ..\..\app
       #! TODO - confirm usage
       - .\app_setup.ps1 $PROJECT_NAME $REGION
 
@@ -74,7 +72,6 @@ phases:
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
       - write-host "[INFO] site URL:`n`n$(terraform output hostname)`n"
-      - pop-location
   #post_build:
     #commands: 
 #reports:
