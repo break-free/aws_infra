@@ -7,8 +7,8 @@ provider "kubernetes" {
 # Remote backend
 terraform {
   backend "s3" {
-    region = "us-west-2"
-    bucket = "rdtfstate-app"
+    region = "default_region"
+    bucket = "default_project_name-app-state"
     key = "terraform.tfstate"
     dynamodb_table = "terraform-state-lock-app"
     encrypt = true    #AES-256 encryption
