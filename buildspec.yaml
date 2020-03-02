@@ -49,7 +49,7 @@ phases:
       # EKS
       - set-location ..\eks\terraform
       # run TF for EKS
-      - .\terrafrom_setup.ps1 $PROJECT_NAME $REGION
+      - .\terraform_setup.ps1 $PROJECT_NAME $REGION
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
