@@ -37,8 +37,8 @@ phases:
       # check for pre-exiting storage and DynamoDB; add to current TF instance 
       - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
       - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-app-state`"") {terraform aws_s3_bucket.tf-state-storage-app $PROJECT_NAME-app-state}
-      - if(aws DynamoDB list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform aws_dynamodb_table.dynbanodb-terraform-state-lock $PROJECT_NAME-state-lock}
-      - if(aws DynamoDB list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
+      - if(aws dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform aws_dynamodb_table.dynbanodb-terraform-state-lock $PROJECT_NAME-state-lock}
+      - if(aws dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
       #run TF for backend
       - .\backend_setup.ps1 $PROJECT_NAME $REGION
       - terraform init -input=false
