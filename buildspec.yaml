@@ -7,7 +7,7 @@ env:
   variables:
     REGION: "us-west-2"
     CLUSTER_NAME: "eks-rd"
-    PROJECT_NAME: "rdtfstate"
+    PROJECT_NAME: "rdtf"
   #parameter-store:
      # key: "value"
      # key: "value"
