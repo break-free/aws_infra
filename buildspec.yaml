@@ -8,6 +8,7 @@ env:
     REGION: "us-west-2"
     CLUSTER_NAME: "eks-rd-2"
     PROJECT_NAME: "rdtf"
+    #TODO: add list of users
     USERS: "arn:aws:iam::146452989591:user/Han.Tu"
   #parameter-store:
      # key: "value"
@@ -35,10 +36,10 @@ phases:
       # Remote backend
       - push-location; set-location remote-backend
       # check for pre-exiting storage and DynamoDB; add to current TF instance 
-      - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
-      - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-app-state`"") {terraform aws_s3_bucket.tf-state-storage-app $PROJECT_NAME-app-state}
-      - if(aws dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform aws_dynamodb_table.dynbanodb-terraform-state-lock $PROJECT_NAME-state-lock}
-      - if(aws dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
+      - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform import aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
+      - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-app-state`"") {terraform import aws_s3_bucket.tf-state-storage-app $PROJECT_NAME-app-state}
+      - if(aws dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform import aws_dynamodb_table.dynbanodb-terraform-state-lock $PROJECT_NAME-state-lock}
+      - if(aws dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
       #run TF for backend
       - .\backend_setup.ps1 $PROJECT_NAME $REGION
       - terraform init -input=false
