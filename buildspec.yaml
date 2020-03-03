@@ -28,7 +28,7 @@ phases:
       - "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
       # AWS CLI, Terraform, Kubectl
       - choco install -yvf terraform kubernetes-cli
-      - choco upgrade -yvf awscli
+      - choco install -yvf awscli --version 1.18.6 # AWS build server contains 1.14.x, which predates EKS, and this choco installs breaks with AWSCLI 2+, so we're stuck with one of the last 1.x
   pre_build:
     commands:
   build:
