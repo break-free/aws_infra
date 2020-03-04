@@ -58,7 +58,7 @@ phases:
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
       ## point kubectl to eks
-      - \& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $CLUSTER_NAME
+      - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $CLUSTER_NAME"
       ## config EKS permissions
       - terraform output config_map_aws_auth > config_map_aws_auth.yaml
       # Shove in user mapping
