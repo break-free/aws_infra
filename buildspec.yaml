@@ -9,8 +9,9 @@ env:
     PROJECT_NAME: "rdtf"
     #TODO: add list of users
     USERS: "arn:aws:iam::146452989591:user/Han.Tu"
-    #refenece AWS.exe by $env:AWSCLI
-    AWSCLI: 'C:\Program Files\Amazon\AWSCLI\bin'
+    # run AWS.exe by 
+    # & $env:AWSCLI
+    AWSCLI: 'C:\Program Files\Amazon\AWSCLI\bin\aws.exe'
   #parameter-store:
      # key: "value"
      # key: "value"
@@ -40,10 +41,10 @@ phases:
       - set-location remote-backend
       - terraform init -input=false
       # check for pre-exiting storage and DynamoDB; add to current TF instance 
-      - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform import aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
-      - if(aws s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-app-state`"") {terraform import aws_s3_bucket.tf-state-storage-app $PROJECT_NAME-app-state}
-      - if(aws dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock $PROJECT_NAME-state-lock}
-      - if(aws dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
+      - if( & $AWSCLI s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform import aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
+      - if( & $AWSCLI s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-app-state`"") {terraform import aws_s3_bucket.tf-state-storage-app $PROJECT_NAME-app-state}
+      - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock $PROJECT_NAME-state-lock}
+      - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
       #run TF for backend
       - .\backend_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform plan -out=tfplan -input=false
@@ -57,7 +58,7 @@ phases:
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
       ## point kubectl to eks
-      - aws eks --region $env:AWS_REGION update-kubeconfig --name $CLUSTER_NAME
+      - \& $AWSCLI --region $env:AWS_REGION update-kubeconfig --name $CLUSTER_NAME
       ## config EKS permissions
       - terraform output config_map_aws_auth > config_map_aws_auth.yaml
       # Shove in user mapping
