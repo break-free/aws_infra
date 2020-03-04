@@ -10,7 +10,8 @@ env:
     USERS: "arn:aws:iam::146452989591:user/Han.Tu"
     # run AWS.exe by 
     # & $env:AWSCLI
-    AWSCLI: 'C:\Program Files\Amazon\AWSCLI\bin\aws.exe'
+    AWSCLI: 'C:\Program Files\Amazon\AWSCLI\bin\aws.exe' # you can't modify PATH (or any ENV var) during runtime, so we create its own
+  #TODO: utilize parameter store
   #parameter-store:
      # key: "value"
      # key: "value"
@@ -62,36 +63,16 @@ phases:
       - terraform output config_map_aws_auth > config_map_aws_auth.yaml
       # Shove in user mapping
       - $MAP_USER = get-content .\map_user.yaml; $USERS = $USERS.split("/")
-      - $MAP_USER -replace "<arn>", $USERS[0] -replace "<user>", $USERS[1] >> .\config_map_aws_auth.yaml
+      - $MAP_USER -replace "<arn>", $USERS[0] -replace "<user>", $USERS[1] >> .\config_map_aws_auth.yaml # TODO - fix permission denied
       ## join node and add permissions
       - kubectl apply -f config_map_aws_auth.yaml
       
       # app
       - set-location ..\..\app
-      #! TODO - confirm usage
+      # run TF for app
       - .\app_setup.ps1 $PROJECT_NAME $env:AWS_REGION
 
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
       - write-host "[INFO] site URL:`n`n$(terraform output hostname)`n"
-  #post_build:
-    #commands: 
-#reports:
-  #report-name-or-arn:
-    #files:
-      # - location
-      # - location
-    #base-directory: location
-    #discard-paths: yes
-    #file-format: JunitXml | CucumberJson
-#artifacts:
-  #files:
-    # - location
-    # - location
-  #name: $(date +%Y-%m-%d)
-  #discard-paths: yes
-  #base-directory: location
-#cache:
-  #paths:
-    # - paths
