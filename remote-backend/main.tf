@@ -6,7 +6,7 @@ provider "aws" {
 # EKS remote state
 resource "aws_s3_bucket" "tf-state-storage" {
   # Must be globally unique.
-  bucket = "rdtfstate"
+  bucket = "rdtfstate2"
 
   # This allows you to roll back in the case of errors.
   versioning {

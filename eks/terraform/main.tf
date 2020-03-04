@@ -3,10 +3,14 @@ provider "aws" {
   region     = "us-west-2"
 }
 
+provider "kubernetes" {
+    version = "~> 1.11"
+}
+
 terraform {
   backend "s3" {
     region = "us-west-2"
-    bucket = "rdtfstate"
+    bucket = "rdtfstate2"
     key = "terraform.tfstate"
     dynamodb_table = "terraform-state-lock"
     encrypt = true    #AES-256 encryption
@@ -291,29 +295,30 @@ locals {
   k8s_admins = [
     for user in data.aws_iam_group.admin-members.users :
     {
-      user_arn = user.arn
+      userarn = user.arn
       username = user.user_name
       groups    = ["system:masters"]
     }
   ]
+
+  k8s_configmap = <<CONFIGMAPAWSAUTH
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-auth
+  namespace: kube-system
+data:
+  mapRoles: |
+    - rolearn: ${aws_iam_role.rd-node.arn}
+      username: system:node:{{EC2PrivateDNSName}}
+      groups:
+        - system:bootstrappers
+        - system:nodes
+  mapUsers: |
+    ${yamlencode(local.k8s_admins)}
+CONFIGMAPAWSAUTH
 }
 
-resource "kubernetes_config_map" "aws_auth" {
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
-
-  data = {
-    mapRoles = <<YAML
-- rolearn: ${aws_iam_role.rd-node.arn}
-  username: system:node:{{EC2PrivateDNSName}}
-  groups:
-    - system:bootstrappers
-    - system:nodes
-YAML
-
-    mapUsers = yamlencode(local.k8s_admins)
-
-  }
+output "config_map_aws_auth" {
+  value = local.k8s_configmap
 }
