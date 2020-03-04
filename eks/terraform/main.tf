@@ -280,30 +280,40 @@ resource "aws_eks_node_group" "rd-eks-node-group"{
   ]
 }
 
-# 1. Run terraform output config_map_aws_auth and save the configuration into a file, e.g. config_map_aws_auth.yaml
-# 2. Run kubectl apply -f config_map_aws_auth.yaml
-# 3. You can verify the worker nodes are joining the cluster via: kubectl get nodes --watch
-
-locals {
-  config_map_aws_auth = <<CONFIGMAPAWSAUTH
-
-
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: aws-auth
-  namespace: kube-system
-data:
-  mapRoles: |
-    - rolearn: ${aws_iam_role.rd-node.arn}
-      username: system:node:{{EC2PrivateDNSName}}
-      groups:
-        - system:bootstrappers
-        - system:nodes
-CONFIGMAPAWSAUTH
-
+# configure RBAC Permissions; defaults to AWS ADMIN group 
+# references: https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/176#issuecomment-580129080
+# IAM K8 RBAC: https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html
+data "aws_iam_group" "admin-members" {
+  group_name = "admin"
 }
 
-output "config_map_aws_auth" {
-  value = local.config_map_aws_auth
+locals {
+  k8s_admins = [
+    for user in data.aws_iam_group.admin-members.users :
+    {
+      user_arn = user.arn
+      username = user.user_name
+      groups    = ["system:masters"]
+    }
+  ]
+}
+
+resource "kubernetes_config_map" "aws_auth" {
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = <<YAML
+- rolearn: ${aws_iam_role.rd-node.arn}
+  username: system:node:{{EC2PrivateDNSName}}
+  groups:
+    - system:bootstrappers
+    - system:nodes
+YAML
+
+    mapUsers = yamlencode(local.k8s_admins)
+
+  }
 }
