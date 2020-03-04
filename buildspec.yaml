@@ -60,10 +60,10 @@ phases:
       - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $PROJECT_NAME"
       - "$(get-content ~\\.kube\\config)  -replace '(command: )(.*$)',\"`${1}$AWSCLI\" | Set-Content -path  ~\\.kube\\config"  #replace w/ full AWSCLI path
       ## config EKS permissions
-      - terraform output config_map_aws_auth > config_map_aws_auth.yaml
+      #- terraform output config_map_aws_auth > config_map_aws_auth.yaml
       # Shove in user mapping
-      - $MAP_USER = get-content .\map_user.yaml; $USERS = $USERS.split("/")
-      - $MAP_USER -replace "<arn>", $USERS[0] -replace "<user>", $USERS[1] >> .\config_map_aws_auth.yaml # TODO - fix permission denied
+      #- $MAP_USER = get-content .\map_user.yaml; $USERS = $USERS.split("/")
+      #- $MAP_USER -replace "<arn>", $USERS[0] -replace "<user>", $USERS[1] >> .\config_map_aws_auth.yaml # TODO - fix permission denied
       ## join node and add permissions
       - kubectl apply -f config_map_aws_auth.yaml
       
