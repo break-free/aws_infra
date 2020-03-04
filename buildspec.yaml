@@ -5,7 +5,6 @@ version: 0.2
 
 env:
   variables:
-    CLUSTER_NAME: "eks-rd-2"
     PROJECT_NAME: "rdtf"
     #TODO: add list of users
     USERS: "arn:aws:iam::146452989591:user/Han.Tu"
@@ -58,7 +57,7 @@ phases:
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
       ## point kubectl to eks
-      - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $CLUSTER_NAME"
+      - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $PROJECT_NAME"
       ## config EKS permissions
       - terraform output config_map_aws_auth > config_map_aws_auth.yaml
       # Shove in user mapping
