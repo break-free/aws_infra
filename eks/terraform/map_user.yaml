@@ -1,5 +1,5 @@
-mapUsers: |
-    - userarn: <arn>/<user>
-    username: <user>
-    groups:
-        - system:masters
+  mapUsers: |
+      - userarn: <arn>/<user>
+      username: <user>
+      groups:
+          - system:masters
