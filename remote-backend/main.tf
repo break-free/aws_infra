@@ -1,12 +1,12 @@
 provider "aws" {
   version = "~> 2.2"
-  region  = "default_region"
+  region  = "us-west-2"
 }
 
 # EKS remote state
 resource "aws_s3_bucket" "tf-state-storage" {
   # Must be globally unique.
-  bucket = "default_project_name-state"
+  bucket = "rdtfstate"
 
   # This allows you to roll back in the case of errors.
   versioning {
@@ -33,7 +33,7 @@ resource "aws_dynamodb_table" "dynamodb-terraform-state-lock" {
 # app remote state
 resource "aws_s3_bucket" "tf-state-storage-app" {
   # Must be globally unique.
-  bucket = "default_project_name-app-state"
+  bucket = "rdtfstate-app"
 
   # This allows you to roll back in the case of errors.
   versioning {

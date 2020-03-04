@@ -5,9 +5,12 @@ version: 0.2
 
 env:
   variables:
-    REGION: "value"
-    CLUSTER_NAME: "value"
-    PROJECT_NAME: "value"
+    PROJECT_NAME: "rdtf"
+    #TODO: add list of users
+    USERS: "arn:aws:iam::146452989591:user/Han.Tu"
+    # run AWS.exe by 
+    # & $env:AWSCLI
+    AWSCLI: 'C:\Program Files\Amazon\AWSCLI\bin\aws.exe'
   #parameter-store:
      # key: "value"
      # key: "value"
@@ -25,51 +28,55 @@ phases:
       # Chocolatey 
       - "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
       # AWS CLI, Terraform, Kubectl
-      - choco install -yv awscli terraform kubernetes-cli
-  #pre_build:
+      - choco install -yvf terraform kubernetes-cli
+      - choco upgrade -yvf awscli --version 1.18.6 # AWS build server contains 1.14.x, which predates EKS, and this choco installs breaks with AWSCLI 2+, so we're stuck with one of the last 1.x
+  pre_build:
+    commands:
   build:
     commands:
-      
+    
       # Remote backend
-      - push-location; set-location remote-backend
-      #! TODO - confirm usage
-      - .\backend_setup.ps1 $PROJECT_NAME $REGION
-
+      - set-location remote-backend
       - terraform init -input=false
+      # check for pre-exiting storage and DynamoDB; add to current TF instance 
+      - if( & $AWSCLI s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform import aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
+      - if( & $AWSCLI s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-app-state`"") {terraform import aws_s3_bucket.tf-state-storage-app $PROJECT_NAME-app-state}
+      - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock $PROJECT_NAME-state-lock}
+      - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
+      #run TF for backend
+      - .\backend_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
-      - pop-location
       
       # EKS
-      - push-location; set-location eks\terraform
-      #! TODO - confirm usage
-      - .\terrafrom_setup.ps1 $PROJECT_NAME $REGION
-
+      - set-location ..\eks\terraform
+      # run TF for EKS
+      - .\terraform_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
       ## point kubectl to eks
-      - aws eks --region $REGION update-kubeconfig --name $CLUSTER_NAME
+      - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $PROJECT_NAME"
+      - "$(get-content ~\\.kube\\config)  -replace '(command: )(.*$)',\"`${1}$AWSCLI\" | Set-Content -path  ~\\.kube\\config"  #replace w/ full AWSCLI path
       ## config EKS permissions
       - terraform output config_map_aws_auth > config_map_aws_auth.yaml
-      #! TODO shove in user mapping
-      - 
+      # Shove in user mapping
+      - $MAP_USER = get-content .\map_user.yaml; $USERS = $USERS.split("/")
+      - $MAP_USER -replace "<arn>", $USERS[0] -replace "<user>", $USERS[1] >> .\config_map_aws_auth.yaml
       ## join node and add permissions
       - kubectl apply -f config_map_aws_auth.yaml
-      - pop-location
       
       # app
-      - push-location; set-location app
+      - set-location ..\..\app
       #! TODO - confirm usage
-      - .\app_setup.ps1 $PROJECT_NAME $REGION
+      - .\app_setup.ps1 $PROJECT_NAME $env:AWS_REGION
 
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
-  post_build:
-    commands: # write the site URL to stdout
       - write-host "[INFO] site URL:`n`n$(terraform output hostname)`n"
-      - pop-location
+  #post_build:
+    #commands: 
 #reports:
   #report-name-or-arn:
     #files:

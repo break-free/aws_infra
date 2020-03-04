@@ -19,7 +19,7 @@ resource "aws_s3_bucket" "tf-state-storage" {
 }
 
 resource "aws_dynamodb_table" "dynamodb-terraform-state-lock" {
-  name           = "terraform-state-lock"
+  name           = "default_project_name-state-lock"
   hash_key       = "LockID"
   read_capacity  = 20
   write_capacity = 20
@@ -46,7 +46,7 @@ resource "aws_s3_bucket" "tf-state-storage-app" {
 }
 
 resource "aws_dynamodb_table" "dynamodb-terraform-state-lock-app" {
-  name           = "terraform-state-lock-app"
+  name           = "default_project_name-state-lock-app"
   hash_key       = "LockID"
   read_capacity  = 20
   write_capacity = 20
