@@ -30,7 +30,6 @@ phases:
       # AWS CLI, Terraform, Kubectl
       - choco install -yvf terraform kubernetes-cli
       - choco upgrade -yvf awscli --version 1.18.6 # AWS build server contains 1.14.x, which predates EKS, and this choco installs breaks with AWSCLI 2+, so we're stuck with one of the last 1.x
-      - set PATH "%PATH%;C:\Program Files\Amazon\AWSCLI\bin"; refreshenv # manually set PATH for AWSCLI 
   pre_build:
     commands:
   build:
@@ -58,6 +57,7 @@ phases:
       - terraform apply -input=false tfplan
       ## point kubectl to eks
       - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $PROJECT_NAME"
+      - "$(get-content ~\.kube\config)  -replace '(command: )(.*$)',"`${1}$env:AWSCLI" | Set-Content -path  ~\.kube\config" #replace w/ full AWSCLI path
       ## config EKS permissions
       - terraform output config_map_aws_auth > config_map_aws_auth.yaml
       # Shove in user mapping
