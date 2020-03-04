@@ -315,7 +315,7 @@ data:
         - system:bootstrappers
         - system:nodes
   mapUsers: |
-    ${yamlencode(local.k8s_admins)}
+    ${indent(4,yamlencode(local.k8s_admins))}
 CONFIGMAPAWSAUTH
 }
 

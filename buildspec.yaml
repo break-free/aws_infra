@@ -54,15 +54,16 @@ phases:
       # run TF for EKS
       - .\terraform_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform init -input=false
-      - if(kubectl get -n kube-system configmap/aws-auth --ignore-not-found=true) {terraform import kubernetes_config_map.aws_auth kube-system/aws-auth}
- # ---> TODO: figure out how to acutally automate adding RBAC permission     
+ # ---> TODO: need testing
 
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
       ## point kubectl to eks
-      #- "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $PROJECT_NAME"
-      #- "$(get-content ~\\.kube\\config)  -replace '(command: )(.*$)',\"`${1}$AWSCLI\" | Set-Content -path  ~\\.kube\\config"  #replace w/ full AWSCLI path
- 
+      - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $PROJECT_NAME"
+      - "$(get-content ~\\.kube\\config)  -replace '(command: )(.*$)',\"`${1}$AWSCLI\" | Set-Content -path  ~\\.kube\\config"  #replace w/ full AWSCLI path
+      ## join node and add RBAC permissions
+      - terraform output config_map_aws_auth > config_map_aws_auth.yaml
+      - kubectl apply -f config_map_aws_auth.yaml
       # app
       - set-location ..\..\app
       # run TF for app
