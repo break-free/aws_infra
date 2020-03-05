@@ -5,7 +5,7 @@ version: 0.2
 
 env:
   variables:
-    PROJECT_NAME: "Company-A"
+    PROJECT_NAME: "company-a" #lowercase alphanumeric and hyphens
     # run AWS.exe by 
     # & $env:AWSCLI
     AWSCLI: 'C:\Program Files\Amazon\AWSCLI\bin\aws.exe' # you can't modify PATH (or any ENV var) during runtime, so we create its own
