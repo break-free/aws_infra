@@ -6,7 +6,7 @@ provider "aws" {
 terraform {
   backend "s3" {
     region = "us-west-2"
-    bucket = "rdtfstate"
+    bucket = "rdtfstate2"
     key = "terraform.tfstate"
     dynamodb_table = "terraform-state-lock"
     encrypt = true    #AES-256 encryption
@@ -280,14 +280,24 @@ resource "aws_eks_node_group" "rd-eks-node-group"{
   ]
 }
 
-# 1. Run terraform output config_map_aws_auth and save the configuration into a file, e.g. config_map_aws_auth.yaml
-# 2. Run kubectl apply -f config_map_aws_auth.yaml
-# 3. You can verify the worker nodes are joining the cluster via: kubectl get nodes --watch
+# configure RBAC Permissions; defaults to AWS ADMIN group 
+# references: https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/176#issuecomment-580129080
+# IAM K8 RBAC: https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html
+data "aws_iam_group" "admin-members" {
+  group_name = "admin"
+}
 
 locals {
-  config_map_aws_auth = <<CONFIGMAPAWSAUTH
+  k8s_admins = [
+    for user in data.aws_iam_group.admin-members.users :
+    {
+      userarn = user.arn
+      username = user.user_name
+      groups    = ["system:masters"]
+    }
+  ]
 
-
+  k8s_configmap = <<CONFIGMAPAWSAUTH
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -300,10 +310,11 @@ data:
       groups:
         - system:bootstrappers
         - system:nodes
+  mapUsers: |
+    ${indent(4,yamlencode(local.k8s_admins))}
 CONFIGMAPAWSAUTH
-
 }
 
 output "config_map_aws_auth" {
-  value = local.config_map_aws_auth
+  value = local.k8s_configmap
 }

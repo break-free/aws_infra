@@ -5,9 +5,7 @@ version: 0.2
 
 env:
   variables:
-    PROJECT_NAME: "rdtf"
-    #TODO: add list of users
-    USERS: "arn:aws:iam::146452989591:user/Han.Tu"
+    PROJECT_NAME: "company-a" #lowercase alphanumeric and hyphens
     # run AWS.exe by 
     # & $env:AWSCLI
     AWSCLI: 'C:\Program Files\Amazon\AWSCLI\bin\aws.exe' # you can't modify PATH (or any ENV var) during runtime, so we create its own
@@ -59,19 +57,14 @@ phases:
       ## point kubectl to eks
       - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $PROJECT_NAME"
       - "$(get-content ~\\.kube\\config)  -replace '(command: )(.*$)',\"`${1}$AWSCLI\" | Set-Content -path  ~\\.kube\\config"  #replace w/ full AWSCLI path
-      ## config EKS permissions
-      #- terraform output config_map_aws_auth > config_map_aws_auth.yaml
-      # Shove in user mapping
-      #- $MAP_USER = get-content .\map_user.yaml; $USERS = $USERS.split("/")
-      #- $MAP_USER -replace "<arn>", $USERS[0] -replace "<user>", $USERS[1] >> .\config_map_aws_auth.yaml # TODO - fix permission denied
-      ## join node and add permissions
+      ## join node and add RBAC permissions
+      - terraform output config_map_aws_auth > config_map_aws_auth.yaml
       - kubectl apply -f config_map_aws_auth.yaml
       
-      # app
+      # App
       - set-location ..\..\app
       # run TF for app
       - .\app_setup.ps1 $PROJECT_NAME $env:AWS_REGION
-
       - terraform init -input=false
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
