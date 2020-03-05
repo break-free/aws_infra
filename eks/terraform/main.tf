@@ -3,10 +3,6 @@ provider "aws" {
   region     = "us-west-2"
 }
 
-provider "kubernetes" {
-    version = "~> 1.11"
-}
-
 terraform {
   backend "s3" {
     region = "us-west-2"
