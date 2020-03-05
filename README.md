@@ -6,7 +6,9 @@ This package contains a `buildspec.yaml` for AWS CodeBuild that will create EKS 
 # Automated EKS Cluster Creation
 You may create an AWS CodeBuild and let it read `buildspec.yaml`. You could assign full access to the CodeBuild service role; otherwise, you'll need permissions to manage S3, DynamoDB, EKS, EC2, amoungst others.
 
-Within `buildspec.yaml`, please assign an unique variable `PROJECT_NAME`. The K8 RBAC are automatically read from IAM `ADMIN` group; you may modify the groups in `./eks/terraform/main.tf` under `data "aws_iam_group" "admin-members"`
+* Things to know about `buildspec.yaml`:
+** please assign an unique variable `PROJECT_NAME` in *lowercase alphasnumeric with hyphens* 
+** The K8 RBAC are automatically read from IAM `ADMIN` group; you may modify the groups in `./eks/terraform/main.tf` under `data "aws_iam_group" "admin-members"`
 
 # Manual EKS Cluster Creation
 ## Workstation Pre-requisite
