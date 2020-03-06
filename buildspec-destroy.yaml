@@ -53,7 +53,7 @@ phases:
       - terraform destroy -auto-approve
 
       # Remote backend
-      - set-location ..\remote-backend
+      - set-location ..\..\remote-backend
       - .\backend_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform init -input=false
       # import existing remote backend 
