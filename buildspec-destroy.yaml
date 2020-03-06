@@ -62,7 +62,8 @@ phases:
       - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock $PROJECT_NAME-state-lock}
       - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
       #run TF for backend
-      - terraform destroy -auto-approve
+      #you'll need to manually delete the s3 buckets
+      - terraform destroy --target aws_dynamodb_table.dynamodb-terraform-state-lock --target aws_dynamodb_table.dynamodb-terraform-state-lock-app -auto-approve
       
 
   #post_build:

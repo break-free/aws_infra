@@ -10,6 +10,10 @@ You may create an AWS CodeBuild and let it read `buildspec.yaml`. You could assi
    - please assign an unique variable `PROJECT_NAME` in *lowercase alphasnumeric with hyphens* 
    - The K8 RBAC are automatically read from IAM `ADMIN` group; you may modify the groups in `./eks/terraform/main.tf` under `data "aws_iam_group" "admin-members"`
 
+# Automated EKS Cluster Destroy
+Run `buildspec-destroy.yaml`
+**Note** - you'll need to delete the two S3 bucket for the remote backend manaully.
+
 # Manual EKS Cluster Creation
 ## Workstation Pre-requisite
 * Configure AWS CLI & AWS account capable of creating S3 and EKS cluster
