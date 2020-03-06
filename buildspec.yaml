@@ -36,6 +36,7 @@ phases:
     
       # Remote backend
       - set-location remote-backend
+      - .\backend_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform init -input=false
       # check for pre-exiting storage and DynamoDB; add to current TF instance 
       - if( & $AWSCLI s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform import aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
@@ -43,7 +44,6 @@ phases:
       - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock $PROJECT_NAME-state-lock}
       - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
       #run TF for backend
-      - .\backend_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform plan -out=tfplan -input=false
       - terraform apply -input=false tfplan
       
