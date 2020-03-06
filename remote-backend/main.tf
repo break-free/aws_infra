@@ -12,10 +12,6 @@ resource "aws_s3_bucket" "tf-state-storage" {
   versioning {
     enabled = true
   }
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_dynamodb_table" "dynamodb-terraform-state-lock" {
@@ -38,10 +34,6 @@ resource "aws_s3_bucket" "tf-state-storage-app" {
   # This allows you to roll back in the case of errors.
   versioning {
     enabled = true
-  }
-
-  lifecycle {
-    prevent_destroy = true
   }
 }
 
