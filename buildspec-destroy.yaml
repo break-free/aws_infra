@@ -64,7 +64,7 @@ phases:
       #run TF for backend
       #you'll need to manually delete the s3 buckets
       - terraform destroy --target aws_dynamodb_table.dynamodb-terraform-state-lock --target aws_dynamodb_table.dynamodb-terraform-state-lock-app -auto-approve
-      
+      - write "please manually destroy S3 buckets:`n$PROJECT_NAME-state`n$PROJECT_NAME-app-state"
 
   #post_build:
     #commands: 

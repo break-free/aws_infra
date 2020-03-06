@@ -1,4 +1,4 @@
-# Provider 
+﻿# Provider 
 # Looks at default kubeconfig locaiton, and assumes it is pre-configured (in this case w/ AWS CLI)
 provider "kubernetes" {
     version = "~> 1.11"
@@ -232,16 +232,22 @@ resource "kubernetes_namespace" "ingress-nginx" {
         kubectl apply -f ${var.ingress_nginx_source}
     EOF
     }
+}
+
+resource "null_resource" "ingress-nginx"{
     provisioner "local-exec" {
     when = destroy
-    # destroy behavior is opposite creation - provisioner runs before resource.
-    # external resource includes namespace, here we manually delete terraform state after kubectl deletes namespace
-    # to avoid "can't find resource" error
+    # external kubectl manifest contains the namespace we're trying to destroy
+    # i.e. leaving this with the namespace resource will spawn 'namespace not found' bc it's already been deleted
+    # here, we'll let terraform clean up the namespace resource, but anything outside namespace is captured here.
     command = <<EOF
         kubectl delete -f ${var.ingress_nginx_source}
-        terraform state rm ${self.metadata[0].name}
     EOF
     }
+    # listens to the ingress resource
+    depends_on = [
+        kubernetes_namespace.ingress_nginx,
+    ]
 }
 
 # points AWS NLB to ingress controller
