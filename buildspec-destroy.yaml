@@ -5,7 +5,7 @@ version: 0.2
 
 env:
   variables:
-    PROJECT_NAME: "rdtf"
+    PROJECT_NAME: "company-a"
     #TODO: add list of users
     USERS: "arn:aws:iam::146452989591:user/Han.Tu"
     # run AWS.exe by 
@@ -65,24 +65,3 @@ phases:
       #you'll need to manually delete the s3 buckets
       - terraform destroy --target aws_dynamodb_table.dynamodb-terraform-state-lock --target aws_dynamodb_table.dynamodb-terraform-state-lock-app -auto-approve
       - write "please manually destroy S3 buckets:`n$PROJECT_NAME-state`n$PROJECT_NAME-app-state"
-
-  #post_build:
-    #commands: 
-#reports:
-  #report-name-or-arn:
-    #files:
-      # - location
-      # - location
-    #base-directory: location
-    #discard-paths: yes
-    #file-format: JunitXml | CucumberJson
-#artifacts:
-  #files:
-    # - location
-    # - location
-  #name: $(date +%Y-%m-%d)
-  #discard-paths: yes
-  #base-directory: location
-#cache:
-  #paths:
-    # - paths
