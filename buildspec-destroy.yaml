@@ -34,7 +34,9 @@ phases:
     commands:
   build:
     commands:
-      #! TODO - confirm usage 
+       # point kubectl to eks
+      - "& $AWSCLI eks --region $env:AWS_REGION update-kubeconfig --name $PROJECT_NAME"
+      - "$(get-content ~\\.kube\\config)  -replace '(command: )(.*$)',\"`${1}$AWSCLI\" | Set-Content -path  ~\\.kube\\config"  #replace w/ full AWSCLI path 
       
       # app 
       - set-location app
@@ -52,9 +54,14 @@ phases:
 
       # Remote backend
       - set-location ..\remote-backend
-      #run TF for backend
       - .\backend_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform init -input=false
+      # import existing remote backend 
+      - if( & $AWSCLI s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-state`"") {terraform import aws_s3_bucket.tf-state-storage $PROJECT_NAME-state}
+      - if( & $AWSCLI s3api list-buckets --query "Buckets[].Name" | select-string -Pattern "`"$PROJECT_NAME-app-state`"") {terraform import aws_s3_bucket.tf-state-storage-app $PROJECT_NAME-app-state}
+      - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock $PROJECT_NAME-state-lock}
+      - if( & $AWSCLI dynamodb list-tables --query "TableNames[*]" | select-string -Pattern "`"$PROJECT_NAME-state-lock-app`"") {terraform import aws_dynamodb_table.dynamodb-terraform-state-lock-app $PROJECT_NAME-state-lock-app}
+      #run TF for backend
       - terraform destroy -auto-approve
       
 
