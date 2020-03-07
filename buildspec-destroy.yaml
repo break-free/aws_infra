@@ -45,7 +45,7 @@ phases:
       - terraform init -input=false
       - terraform destroy -auto-approve
       #TODO - integrate this within tarraform manifest
-      - kubectl delete -f 'https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml'
+      - kubectl delete -f 'https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml' --all
 
       # EKS
       - set-location ..\eks\terraform
