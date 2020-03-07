@@ -44,6 +44,8 @@ phases:
       - .\app_setup.ps1 $PROJECT_NAME $env:AWS_REGION
       - terraform init -input=false
       - terraform destroy -auto-approve
+      #TODO - integrate this within tarraform manifest
+      - kubectl delete -f 'https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml'
 
       # EKS
       - set-location ..\eks\terraform

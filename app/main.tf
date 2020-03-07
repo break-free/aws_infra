@@ -8,7 +8,7 @@ provider "kubernetes" {
 terraform {
   backend "s3" {
     region = "us-west-2"
-    bucket = "rdtfstate-app"
+    bucket = "company-a-app-state"
     key = "terraform.tfstate"
     dynamodb_table = "terraform-state-lock-app"
     encrypt = true    #AES-256 encryption
@@ -232,22 +232,8 @@ resource "kubernetes_namespace" "ingress-nginx" {
         kubectl apply -f ${var.ingress_nginx_source}
     EOF
     }
-}
-
-resource "null_resource" "ingress-nginx"{
-    provisioner "local-exec" {
-    when = destroy
-    # external kubectl manifest contains the namespace we're trying to destroy
-    # i.e. leaving this with the namespace resource will spawn 'namespace not found' bc it's already been deleted
-    # here, we'll let terraform clean up the namespace resource, but anything outside namespace is captured here.
-    command = <<EOF
-        kubectl delete -f ${var.ingress_nginx_source}
-    EOF
-    }
-    # listens to the ingress resource
-    depends_on = [
-        kubernetes_namespace.ingress_nginx,
-    ]
+    #TODO - integrate the delete command - it runs into dependency issue when included w/ this resource
+    #kubectl delete -f ${var.ingress_nginx_source}
 }
 
 # points AWS NLB to ingress controller
